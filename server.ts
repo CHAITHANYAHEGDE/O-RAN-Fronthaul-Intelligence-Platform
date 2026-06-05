@@ -73,7 +73,7 @@ app.post("/api/upload", upload.array("files"), (req: express.Request, res: expre
     }
     
     processedData[file.originalname.replace('.dat', '')] = slots;
-  });
+console.log("Processed:", file.originalname);  });
   
   res.json({ status: "success", cells_processed: Object.keys(processedData) });
 });
@@ -122,7 +122,13 @@ app.get("/api/analyze", (req, res) => {
         JSON.stringify(link_traffic)
       );
 
-      res.json({ topology, explanations, optimization, link_traffic });
+      console.log("Cells:", Object.keys(processedData));
+console.log("Cell count:", Object.keys(processedData).length);
+
+res.json({
+  status: "success",
+  cells_processed: Object.keys(processedData)
+});
     } catch (e) {
       res.status(500).json({ error: "Failed to parse ML results" });
     }
