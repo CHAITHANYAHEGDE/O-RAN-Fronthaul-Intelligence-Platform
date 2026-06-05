@@ -9,10 +9,17 @@ class TopologyEngine:
     """
     Advanced Topology Detection using Feature Engineering and Spectral Clustering.
     """
-    def __init__(self, n_clusters=3):
+    def __init__(self,	 n_clusters=3):
         self.n_clusters = n_clusters
         self.scaler = StandardScaler()
-        self.model = SpectralClustering(n_clusters=n_clusters, affinity='nearest_neighbors', random_state=42)
+       n_samples = len(features_df)
+
+self.model = SpectralClustering(
+    n_clusters=min(self.n_clusters, n_samples),
+    affinity='nearest_neighbors',
+    n_neighbors=max(1, min(3, n_samples - 1)),
+    random_state=42
+)
         self.explainer = None
 
     def dtw_distance(self, s1, s2):
@@ -109,6 +116,9 @@ class TopologyEngine:
         return pd.DataFrame(features)
 
     def detect_topology(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        if len(features_df) < 2:
+    features_df["link_id"] = 1
+    return features_df 
         X = features_df.drop('cell_id', axis=1)
         X_scaled = self.scaler.fit_transform(X)
         
