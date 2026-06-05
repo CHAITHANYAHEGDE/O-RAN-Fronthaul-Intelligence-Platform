@@ -515,7 +515,7 @@ export default function App() {
             {sidebarOpen && (
               <div className="overflow-hidden">
                 <h1 className="text-lg font-bold tracking-tight text-white whitespace-nowrap">CRH-Byteme</h1>
-                <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">OptiHaul v2.0</p>
+                <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">CRH Fronthaul AI v1.0</p>
               </div>
             )}
           </div>
