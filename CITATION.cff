@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: "TwinShield"
+version: 1.0.0
+message: "If you use TwinShield in your work, please cite it as below."
+type: software
+
+authors:
+  - family-names: Hegde
+    given-names: Chaithanya
+
+repository-code: "https://github.com/CHAITHANYAHEGDE/TwinShield"
+
+abstract: >
+  TwinShield is an AI-powered security platform for vulnerability assessment,
+  reconnaissance, and cybersecurity automation. The framework integrates modern
+  offensive security methodologies with intelligent analysis to provide efficient
+  and scalable security testing capabilities.
+
+keywords:
+  - cybersecurity
+  - bug bounty
+  - vulnerability assessment
+  - penetration testing
+  - offensive security
+  - reconnaissance
+  - ai
+  - security automation
+  - web security
+
+license: MIT
+
+date-released: 2026-06-22
