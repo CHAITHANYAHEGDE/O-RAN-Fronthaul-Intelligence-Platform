@@ -1,31 +1,38 @@
 cff-version: 1.2.0
-title: "TwinShield"
+title: "Intelligent Fronthaul Network Optimization Platform"
 version: 1.0.0
-message: "If you use TwinShield in your work, please cite it as below."
+message: "If you use this repository, please cite it as below."
 type: software
 
 authors:
   - family-names: Hegde
     given-names: Chaithanya
+  - family-names: Rucha
+    given-names: ""
+  - family-names: Rawat
+    given-names: Arohi
 
-repository-code: "https://github.com/CHAITHANYAHEGDE/TwinShield"
+repository-code: "https://github.com/CHAITHANYAHEGDE/O-RAN-Fronthaul-Intelligence-Platform"
 
 abstract: >
-  TwinShield is an AI-powered security platform for vulnerability assessment,
-  reconnaissance, and cybersecurity automation. The framework integrates modern
-  offensive security methodologies with intelligent analysis to provide efficient
-  and scalable security testing capabilities.
+  An AI-powered O-RAN fronthaul network optimization platform for topology
+  detection, capacity estimation, traffic analytics, and explainable network
+  intelligence. The framework integrates machine learning, statistical modeling,
+  Monte Carlo simulation, SHAP explainability, and interactive visualization
+  to support intelligent telecom network planning and optimization.
 
 keywords:
-  - cybersecurity
-  - bug bounty
-  - vulnerability assessment
-  - penetration testing
-  - offensive security
-  - reconnaissance
-  - ai
-  - security automation
-  - web security
+  - o-ran
+  - telecommunications
+  - network optimization
+  - machine learning
+  - explainable ai
+  - shap
+  - fastapi
+  - react
+  - topology detection
+  - capacity estimation
+  - traffic analytics
 
 license: MIT
 
