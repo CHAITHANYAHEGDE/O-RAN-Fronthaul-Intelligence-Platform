@@ -358,3 +358,14 @@ MIT License
 ## Acknowledgments
 
 This project was developed as part of a telecommunications-focused innovation initiative exploring intelligent O-RAN fronthaul optimization through data analytics, machine learning, statistical modeling, and explainable AI.
+
+## Current Status & Roadmap
+
+This platform is currently under active development. The core intelligence algorithms and data parsing modules are functional, but we are actively tracking future enhancements in our issue tracker. Planned improvements include:
+
+- **Validation & Testing:** Expanding unit test coverage and parsing robustness for malformed packets.
+- **Documentation:** Providing detailed API schemas and documenting the statistical methodology behind our capacity estimation.
+- **Visualization:** Enhancing SHAP explainability plots and adding dashboard screenshots to this documentation.
+- **Future Capabilities:** Real-time analytics, congestion forecasting, and reinforcement learning optimization.
+
+*(See the repository issues for detailed tracking of these planned features).*
