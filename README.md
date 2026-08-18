@@ -1,4 +1,4 @@
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://o-ran-fronthaul-intelligence-platform.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://o-ran-fronthaul-intelligence-platform-1.onrender.com)
 <div align="center">
 
 # Intelligent Fronthaul Network Optimization Platform
