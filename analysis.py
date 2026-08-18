@@ -9,17 +9,9 @@ class TopologyEngine:
     """
     Advanced Topology Detection using Feature Engineering and Spectral Clustering.
     """
-    def __init__(self,	 n_clusters=3):
+    def __init__(self, n_clusters=3):
         self.n_clusters = n_clusters
         self.scaler = StandardScaler()
-       n_samples = len(features_df)
-
-self.model = SpectralClustering(
-    n_clusters=min(self.n_clusters, n_samples),
-    affinity='nearest_neighbors',
-    n_neighbors=max(1, min(3, n_samples - 1)),
-    random_state=42
-)
         self.explainer = None
 
     def dtw_distance(self, s1, s2):
@@ -44,9 +36,16 @@ self.model = SpectralClustering(
     def extract_features(self, cell_data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
         features = []
         cell_ids = list(cell_data.keys())
-        
-        # Pre-calculate throughput series for correlation analysis
-        throughput_series = {cid: cell_data[cid]['throughput_gbps'].values for cid in cell_ids}
+        if not cell_ids:
+            return pd.DataFrame()
+            
+        # Find minimum length of throughput series to avoid broadcasting shape errors
+        min_len = min(len(cell_data[cid]['throughput_gbps']) for cid in cell_ids)
+        if min_len == 0:
+            return pd.DataFrame()
+            
+        # Pre-calculate throughput series for correlation analysis, aligned to min_len
+        throughput_series = {cid: cell_data[cid]['throughput_gbps'].values[:min_len] for cid in cell_ids}
         
         # Identify packet loss events (throughput < 10% of peak)
         loss_events = {}
@@ -117,8 +116,17 @@ self.model = SpectralClustering(
 
     def detect_topology(self, features_df: pd.DataFrame) -> pd.DataFrame:
         if len(features_df) < 2:
-    features_df["link_id"] = 1
-    return features_df 
+            features_df["link_id"] = 1
+            return features_df 
+            
+        n_samples = len(features_df)
+        self.model = SpectralClustering(
+            n_clusters=min(self.n_clusters, n_samples),
+            affinity='nearest_neighbors',
+            n_neighbors=max(1, min(3, n_samples - 1)),
+            random_state=42
+        )
+        
         X = features_df.drop('cell_id', axis=1)
         X_scaled = self.scaler.fit_transform(X)
         
@@ -137,6 +145,10 @@ self.model = SpectralClustering(
 
     def get_explanations(self, features_df: pd.DataFrame) -> Dict:
         # Return SHAP feature importance for the UI
+        if not hasattr(self, 'shap_values') or self.shap_values is None:
+            feature_names = [c for c in features_df.columns if c not in ['cell_id', 'link_id']]
+            return {name: 0.0 for name in feature_names}
+            
         import numpy as np
         feature_names = [c for c in features_df.columns if c not in ['cell_id', 'link_id']]
         

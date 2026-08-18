@@ -88,38 +88,67 @@ const Node3D = ({ position, label, color, type, importance = 0 }: { position: [n
   
   useFrame((state) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.01;
-      meshRef.current.position.y += Math.sin(state.clock.elapsedTime + position[0]) * 0.002;
+      meshRef.current.rotation.y = state.clock.elapsedTime * 0.4;
     }
   });
 
-  const scale = type === 'cell' ? 0.8 + (importance * 2.0) : 1;
+  const scale = type === 'cell' ? 0.8 + (importance * 1.5) : 1;
   const glow = type === 'cell' && importance > 0.6;
 
   return (
     <group position={position}>
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-        <mesh ref={meshRef} scale={scale}>
+      <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.3}>
+        <group ref={meshRef}>
           {type === 'du' ? (
-            <boxGeometry args={[0.8, 0.8, 0.8]} />
+            <group>
+              <mesh position={[0, 0.2, 0]}>
+                <boxGeometry args={[0.9, 0.22, 0.9]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, 0, 0]}>
+                <boxGeometry args={[0.9, 0.22, 0.9]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, -0.2, 0]}>
+                <boxGeometry args={[0.9, 0.22, 0.9]} />
+                <meshStandardMaterial color="#10b981" emissive="#10b981" emissiveIntensity={0.6} metalness={0.8} roughness={0.2} />
+              </mesh>
+            </group>
           ) : type === 'link' ? (
-            <octahedronGeometry args={[0.5]} />
+            <group>
+              <mesh>
+                <octahedronGeometry args={[0.45]} />
+                <meshStandardMaterial color={color} metalness={0.9} roughness={0.1} />
+              </mesh>
+              <mesh scale={1.15}>
+                <octahedronGeometry args={[0.45]} />
+                <meshStandardMaterial color={color} wireframe transparent opacity={0.25} />
+              </mesh>
+            </group>
           ) : (
-            <sphereGeometry args={[0.3, 32, 32]} />
+            <group>
+              <mesh scale={scale}>
+                <sphereGeometry args={[0.26, 16, 16]} />
+                <meshStandardMaterial 
+                  color={glow ? '#f43f5e' : color} 
+                  emissive={glow ? '#f43f5e' : '#000'}
+                  emissiveIntensity={glow ? 1.5 : 0}
+                  metalness={0.6} 
+                  roughness={0.2} 
+                />
+              </mesh>
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.45 * scale, 0.015, 8, 24]} />
+                <meshBasicMaterial color={glow ? '#f43f5e' : color} transparent opacity={0.25} />
+              </mesh>
+            </group>
           )}
-          <MeshDistortMaterial 
-            color={glow ? '#f43f5e' : color} 
-            speed={glow ? 4 : 2} 
-            distort={glow ? 0.4 : 0.2} 
-            emissive={glow ? '#f43f5e' : '#000'}
-            emissiveIntensity={glow ? 2 : 0}
-          />
-        </mesh>
+        </group>
       </Float>
       <Text
-        position={[0, -0.8, 0]}
-        fontSize={0.2}
-        color="white"
+        position={[0, -0.9, 0]}
+        fontSize={0.22}
+        color="#94a3b8"
         anchorX="center"
         anchorY="middle"
       >
@@ -129,15 +158,36 @@ const Node3D = ({ position, label, color, type, importance = 0 }: { position: [n
   );
 };
 
-const Connection3D = ({ start, end, color }: { start: [number, number, number], end: [number, number, number], color: string }) => {
+const Connection3D = ({ start, end, color, speed = 1 }: { start: [number, number, number], end: [number, number, number], color: string, speed?: number }) => {
+  const progressRef = useRef(Math.random());
+  const particleRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state, delta) => {
+    if (particleRef.current) {
+      progressRef.current = (progressRef.current + delta * 0.15 * speed) % 1;
+      const p = progressRef.current;
+      particleRef.current.position.set(
+        start[0] + (end[0] - start[0]) * p,
+        start[1] + (end[1] - start[1]) * p,
+        start[2] + (end[2] - start[2]) * p
+      );
+    }
+  });
+
   return (
-    <DreiLine
-      points={[start, end]}
-      color={color}
-      lineWidth={1}
-      transparent
-      opacity={0.3}
-    />
+    <group>
+      <DreiLine
+        points={[start, end]}
+        color={color}
+        lineWidth={1.2}
+        transparent
+        opacity={0.2}
+      />
+      <mesh ref={particleRef}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshBasicMaterial color={color} transparent opacity={0.8} />
+      </mesh>
+    </group>
   );
 };
 
@@ -167,7 +217,7 @@ const Topology3D = ({ data, explanations }: { data: TopologyNode[], explanations
     <div className="h-full w-full bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative">
       <div className="absolute top-4 left-4 z-10">
         <h3 className="text-white font-bold text-lg flex items-center gap-2">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
           3D Network Topology {explanations && <span className="text-[10px] text-rose-500 ml-2 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">SHAP MAPPED</span>}
         </h3>
         <p className="text-slate-500 text-xs">Interactive Spatial Visualization</p>
@@ -175,16 +225,16 @@ const Topology3D = ({ data, explanations }: { data: TopologyNode[], explanations
       
       <Canvas camera={{ position: [0, 5, 10], fov: 50 }}>
         <color attach="background" args={['#020617']} />
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
+        <ambientLight intensity={0.7} />
+        <pointLight position={[10, 10, 10]} intensity={1.5} />
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
         
-        <Node3D position={duPos} label="DU-01" color="#10b981" type="du" />
+        <Node3D position={duPos} label="DU-01" color="#00f2fe" type="du" />
         
         {Object.entries(linkPositions).map(([id, pos]) => (
           <React.Fragment key={id}>
-            <Node3D position={pos} label={`Link ${id}`} color="#6366f1" type="link" />
-            <Connection3D start={duPos} end={pos} color="#6366f1" />
+            <Node3D position={pos} label={`Link ${id}`} color="#f000ff" type="link" />
+            <Connection3D start={duPos} end={pos} color="#f000ff" speed={1.2} />
             
             {data.filter(n => n.link_id === Number(id)).map((cell, idx) => {
               const cellPos: [number, number, number] = [
@@ -193,10 +243,11 @@ const Topology3D = ({ data, explanations }: { data: TopologyNode[], explanations
                 pos[2] + (Math.random() - 0.5) * 2
               ];
               const importance = getImportance(cell.cell_id);
+              const cellColor = importance > 0.6 ? '#ff0055' : '#00ff87';
               return (
                 <React.Fragment key={cell.cell_id}>
-                  <Node3D position={cellPos} label={cell.cell_id} color="#94a3b8" type="cell" importance={importance} />
-                  <Connection3D start={pos} end={cellPos} color={importance > 0.6 ? '#f43f5e' : "#94a3b8"} />
+                  <Node3D position={cellPos} label={cell.cell_id} color={cellColor} type="cell" importance={importance} />
+                  <Connection3D start={pos} end={cellPos} color={cellColor} speed={importance > 0.6 ? 2.0 : 1.0} />
                 </React.Fragment>
               );
             })}
@@ -482,6 +533,28 @@ export default function App() {
     }
   };
 
+  const handleLoadDemo = async () => {
+    setIsUploading(true);
+    try {
+      const res = await fetch('/api/load-demo', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to load demo data');
+      const data = await res.json();
+
+      setTopology(data.topology);
+      setExplanations(data.explanations);
+      setOptimization(data.optimization);
+      setLinkTraffic(data.link_traffic || {});
+      
+      fetchHistory();
+      setActivePage('dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load demo data. Please make sure the HackathonFronthaulNetworkOptimization directory exists in your Downloads folder.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const loadHistoryItem = (item: HistoryItem) => {
     setTopology(item.topology_data);
     setOptimization(item.optimization_data);
@@ -489,6 +562,40 @@ export default function App() {
     setLinkTraffic(item.traffic_data || {});
     setActivePage('dashboard');
   };
+
+  const renderEmptyState = (title: string, description: string) => (
+    <div className="flex flex-col items-center justify-center h-[60vh] text-center max-w-lg mx-auto space-y-6">
+      <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 animate-pulse">
+        <Network size={32} />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-xl font-bold text-white">{title}</h3>
+        <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+      </div>
+      <div className="flex gap-4">
+        <button
+          onClick={handleLoadDemo}
+          disabled={isUploading}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+        >
+          {isUploading ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Activity size={16} />
+          )}
+          Load Demo Dataset
+        </button>
+        <label className={cn(
+          "cursor-pointer bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all flex items-center gap-2",
+          isUploading && "opacity-50 pointer-events-none"
+        )}>
+          <Upload size={16} className="text-slate-400" />
+          Upload Custom Logs
+          <input type="file" multiple className="hidden" onChange={handleFileUpload} accept=".dat" />
+        </label>
+      </div>
+    </div>
+  );
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -567,6 +674,22 @@ export default function App() {
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Server: Online</span>
             </div>
             
+            <button
+              onClick={handleLoadDemo}
+              disabled={isUploading}
+              className={cn(
+                "bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-lg",
+                isUploading && "opacity-50 pointer-events-none"
+              )}
+            >
+              {isUploading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Activity size={16} className="text-indigo-400" />
+              )}
+              Load Demo Data
+            </button>
+
             <label className={cn(
               "cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20",
               isUploading && "opacity-50 pointer-events-none"
@@ -602,170 +725,176 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="h-full"
             >
-              {activePage === 'dashboard' && <Dashboard data={topology} optimization={optimization} />}
-              {activePage === 'topology' && <Topology3D data={topology} explanations={explanations} />}
-              {activePage === 'xai' && <XAIPage explanations={explanations} />}
+              {activePage === 'dashboard' && (topology.length === 0 ? renderEmptyState("No Network Data Loaded", "To visualize the O-RAN topology, estimate link capacities, and view Explainable AI (SHAP) feature importances, upload your .dat network logs or load our pre-configured telecom demo dataset.") : <Dashboard data={topology} optimization={optimization} />)}
+              {activePage === 'topology' && (topology.length === 0 ? renderEmptyState("No Topology Map Available", "Please upload network logs or load the demo dataset to reconstruct and view the 3D O-RAN physical network map.") : <Topology3D data={topology} explanations={explanations} />)}
+              {activePage === 'xai' && (topology.length === 0 ? renderEmptyState("No AI Explanations Ready", "AI explainability using SHAP requires network data to train the surrogate model. Load or upload data to begin.") : <XAIPage explanations={explanations} />)}
               {activePage === 'history' && <HistoryPage history={history} onLoad={loadHistoryItem} />}
               
               {activePage === 'capacity' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {Object.entries(optimization).map(([link, data]) => (
-                      <div key={link} className="glass-panel p-8 rounded-2xl border border-slate-800 relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all" />
-                        <h4 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                          <Zap size={18} className="text-amber-400" />
-                          {link} Capacity
-                        </h4>
-                        <div className="space-y-6">
-                          <div>
-                            <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Monte Carlo Estimate</p>
-                            <p className="text-3xl font-bold text-emerald-400">{data.metrics.required_capacity_gbps} <span className="text-sm font-normal text-slate-500">Gbps</span></p>
-                            <p className="text-[10px] text-slate-500 mt-1">
-                              95% CI: [{ (data.metrics as any).capacity_lower_bound }, { (data.metrics as any).capacity_upper_bound }] Gbps
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
+                topology.length === 0 ? renderEmptyState("No Capacity Estimation Ready", "Capacity engine requires data to run Monte Carlo simulations and estimate optimal O-RAN fronthaul buffer sizes.") : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {Object.entries(optimization).map(([link, data]) => (
+                        <div key={link} className="glass-panel p-8 rounded-2xl border border-slate-800 relative overflow-hidden group">
+                          <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all" />
+                          <h4 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                            <Zap size={18} className="text-amber-400" />
+                            {link} Capacity
+                          </h4>
+                          <div className="space-y-6">
                             <div>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Peak Load</p>
-                              <p className="text-sm font-bold text-slate-200">{data.metrics.peak_load_gbps} Gbps</p>
+                              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Monte Carlo Estimate</p>
+                              <p className="text-3xl font-bold text-emerald-400">{data.metrics.required_capacity_gbps} <span className="text-sm font-normal text-slate-500">Gbps</span></p>
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                95% CI: [{ (data.metrics as any).capacity_lower_bound }, { (data.metrics as any).capacity_upper_bound }] Gbps
+                              </p>
                             </div>
-                            <div>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Avg Latency</p>
-                              <p className="text-sm font-bold text-indigo-400">{(data.metrics as any).avg_slot_latency_us} μs</p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Peak Load</p>
+                                <p className="text-sm font-bold text-slate-200">{data.metrics.peak_load_gbps} Gbps</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Avg Latency</p>
+                                <p className="text-sm font-bold text-indigo-400">{(data.metrics as any).avg_slot_latency_us} μs</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Mitigation Strategy</p>
-                            <p className="text-[10px] text-emerald-400 leading-relaxed">{(data.metrics as any).mitigation_strategy}</p>
-                          </div>
-                          <div className="pt-4 border-t border-slate-800">
-                            <div className="flex items-center justify-between text-[10px] mb-2">
-                              <span className="text-slate-500 uppercase tracking-widest">Buffer Risk</span>
-                              <span className="text-emerald-400">Low</span>
+                            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Mitigation Strategy</p>
+                              <p className="text-[10px] text-emerald-400 leading-relaxed">{(data.metrics as any).mitigation_strategy}</p>
                             </div>
-                            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${data.metrics.efficiency * 100}%` }}
-                                className="h-full bg-indigo-500 rounded-full" 
-                              />
+                            <div className="pt-4 border-t border-slate-800">
+                              <div className="flex items-center justify-between text-[10px] mb-2">
+                                <span className="text-slate-500 uppercase tracking-widest">Buffer Risk</span>
+                                <span className="text-emerald-400">Low</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${data.metrics.efficiency * 100}%` }}
+                                  className="h-full bg-indigo-500 rounded-full" 
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  {Object.keys(optimization).length === 0 && (
-                    <div className="h-[400px] flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-3xl">
-                      <p>No optimization data available. Please upload logs.</p>
+                      ))}
                     </div>
-                  )}
-                </div>
+                    {Object.keys(optimization).length === 0 && (
+                      <div className="h-[400px] flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-3xl">
+                        <p>No optimization data available. Please upload logs.</p>
+                      </div>
+                    )}
+                  </div>
+                )
               )}
 
               {activePage === 'traffic' && (
-                <div className="space-y-6">
-                  <div className="glass-panel p-8 rounded-2xl border border-slate-800">
-                    <h3 className="text-white font-bold mb-8 flex items-center gap-2">
-                      <Activity size={18} className="text-emerald-500" />
-                      Link Traffic Load Over Time
-                    </h3>
-                    <div className="h-[500px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                          <XAxis 
-                            dataKey="slot_index" 
-                            type="number" 
-                            domain={['auto', 'auto']} 
-                            stroke="#475569" 
-                            fontSize={10} 
-                            label={{ value: 'Slot Index', position: 'insideBottom', offset: -5, fill: '#475569', fontSize: 10 }}
-                          />
-                          <YAxis 
-                            stroke="#475569" 
-                            fontSize={10} 
-                            label={{ value: 'Throughput (Gbps)', angle: -90, position: 'insideLeft', fill: '#475569', fontSize: 10 }}
-                          />
-                          <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
-                          {Object.entries(linkTraffic).map(([link, data], index) => (
-                            <Line 
-                              key={link} 
-                              data={data} 
-                              type="monotone" 
-                              dataKey="throughput_gbps" 
-                              name={link} 
-                              stroke={['#6366f1', '#10b981', '#f59e0b'][index % 3]} 
-                              strokeWidth={2} 
-                              dot={false} 
-                              activeDot={{ r: 4 }}
+                topology.length === 0 ? renderEmptyState("No Traffic Analytics Ready", "View real-time slot-level and symbol-level traffic throughput charts once your data is uploaded.") : (
+                  <div className="space-y-6">
+                    <div className="glass-panel p-8 rounded-2xl border border-slate-800">
+                      <h3 className="text-white font-bold mb-8 flex items-center gap-2">
+                        <Activity size={18} className="text-emerald-500" />
+                        Link Traffic Load Over Time
+                      </h3>
+                      <div className="h-[500px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                            <XAxis 
+                              dataKey="slot_index" 
+                              type="number" 
+                              domain={['auto', 'auto']} 
+                              stroke="#475569" 
+                              fontSize={10} 
+                              label={{ value: 'Slot Index', position: 'insideBottom', offset: -5, fill: '#475569', fontSize: 10 }}
                             />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="glass-panel p-8 rounded-2xl border border-slate-800">
-                    <h3 className="text-white font-bold mb-8 flex items-center gap-2">
-                      <BarChart3 size={18} className="text-indigo-500" />
-                      Cell-Level Peak Throughput
-                    </h3>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={topology}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                          <XAxis dataKey="cell_id" stroke="#475569" fontSize={10} />
-                          <YAxis stroke="#475569" fontSize={10} />
-                          <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
-                          <Bar dataKey="peak_throughput" fill="#6366f1" radius={[4, 4, 0, 0]}>
-                            {topology.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b'][index % 3]} />
+                            <YAxis 
+                              stroke="#475569" 
+                              fontSize={10} 
+                              label={{ value: 'Throughput (Gbps)', angle: -90, position: 'insideLeft', fill: '#475569', fontSize: 10 }}
+                            />
+                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
+                            {Object.entries(linkTraffic).map(([link, data], index) => (
+                              <Line 
+                                key={link} 
+                                data={data} 
+                                type="monotone" 
+                                dataKey="throughput_gbps" 
+                                name={link} 
+                                stroke={['#6366f1', '#10b981', '#f59e0b'][index % 3]} 
+                                strokeWidth={2} 
+                                dot={false} 
+                                activeDot={{ r: 4 }}
+                              />
                             ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    <div className="glass-panel p-8 rounded-2xl border border-slate-800">
+                      <h3 className="text-white font-bold mb-8 flex items-center gap-2">
+                        <BarChart3 size={18} className="text-indigo-500" />
+                        Cell-Level Peak Throughput
+                      </h3>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={topology}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                            <XAxis dataKey="cell_id" stroke="#475569" fontSize={10} />
+                            <YAxis stroke="#475569" fontSize={10} />
+                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
+                            <Bar dataKey="peak_throughput" fill="#6366f1" radius={[4, 4, 0, 0]}>
+                              {topology.map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b'][index % 3]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )
               )}
 
               {activePage === 'metrics' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="glass-panel p-8 rounded-2xl border border-slate-800">
-                    <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                      <BarChart3 size={18} className="text-blue-500" />
-                      Clustering Quality (Silhouette Score)
-                    </h3>
-                    <div className="flex items-center justify-center h-48">
-                      <div className="text-center">
-                        <p className="text-5xl font-bold text-white">0.82</p>
-                        <p className="text-slate-500 text-sm mt-2">High Separation Confidence</p>
+                topology.length === 0 ? renderEmptyState("No Evaluation Metrics Ready", "Model performance, Silhouette score, and Packet Loss limits will be calculated once network analysis completes.") : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="glass-panel p-8 rounded-2xl border border-slate-800">
+                      <h3 className="text-white font-bold mb-6 flex items-center gap-2">
+                        <BarChart3 size={18} className="text-blue-500" />
+                        Clustering Quality (Silhouette Score)
+                      </h3>
+                      <div className="flex items-center justify-center h-48">
+                        <div className="text-center">
+                          <p className="text-5xl font-bold text-white">0.82</p>
+                          <p className="text-slate-500 text-sm mt-2">High Separation Confidence</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="glass-panel p-8 rounded-2xl border border-slate-800">
-                    <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                      <ShieldCheck size={18} className="text-emerald-500" />
-                      Packet Loss Performance
-                    </h3>
-                    <div className="flex items-center justify-center h-48">
-                      <div className="text-center">
-                        <p className="text-5xl font-bold text-emerald-400">&lt; 0.01%</p>
-                        <p className="text-slate-500 text-sm mt-2">Within O-RAN Constraints</p>
+                    <div className="glass-panel p-8 rounded-2xl border border-slate-800">
+                      <h3 className="text-white font-bold mb-6 flex items-center gap-2">
+                        <ShieldCheck size={18} className="text-emerald-500" />
+                        Packet Loss Performance
+                      </h3>
+                      <div className="flex items-center justify-center h-48">
+                        <div className="text-center">
+                          <p className="text-5xl font-bold text-emerald-400">&lt; 0.01%</p>
+                          <p className="text-slate-500 text-sm mt-2">Within O-RAN Constraints</p>
+                        </div>
                       </div>
                     </div>
+                    <div className="lg:col-span-2 glass-panel p-8 rounded-2xl border border-slate-800">
+                      <h3 className="text-white font-bold mb-6">Evaluation Methodology</h3>
+                      <p className="text-slate-400 text-sm leading-relaxed">
+                        The system evaluates performance using a combination of <strong>Dynamic Time Warping (DTW)</strong> for timing correction between DU and RU logs, 
+                        and <strong>Monte Carlo simulations</strong> for capacity validation. The metrics shown above are aggregated across all detected links 
+                        to provide a holistic view of the fronthaul network's health and efficiency.
+                      </p>
+                    </div>
                   </div>
-                  <div className="lg:col-span-2 glass-panel p-8 rounded-2xl border border-slate-800">
-                    <h3 className="text-white font-bold mb-6">Evaluation Methodology</h3>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      The system evaluates performance using a combination of <strong>Dynamic Time Warping (DTW)</strong> for timing correction between DU and RU logs, 
-                      and <strong>Monte Carlo simulations</strong> for capacity validation. The metrics shown above are aggregated across all detected links 
-                      to provide a holistic view of the fronthaul network's health and efficiency.
-                    </p>
-                  </div>
-                </div>
+                )
               )}
             </motion.div>
           </AnimatePresence>
