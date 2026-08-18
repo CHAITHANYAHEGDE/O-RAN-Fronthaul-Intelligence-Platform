@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: O-RAN-Fronthaul-Intelligence-Platform-1
+    runtime: node
+    plan: free
+    buildCommand: npm install && pip install -r requirements.txt && npm run build
+    startCommand: npx tsx server.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
