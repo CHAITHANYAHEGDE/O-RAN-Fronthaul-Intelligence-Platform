@@ -164,57 +164,42 @@ app.get("/api/analyze", (req, res) => {
 });
 
 app.post("/api/load-demo", (req, res) => {
-  const demoDir = "/Users/chaithanyahegde/Downloads/HackathonFronthaulNetworkOptimization";
-  if (!fs.existsSync(demoDir)) {
-    return res.status(400).json({ error: "Demo data directory not found at " + demoDir });
-  }
-
   try {
-    // Filter to load only the first 3 throughput cells to keep demo loading fast and responsive
-    const files = fs.readdirSync(demoDir).filter(f => {
-      const name = f.toLowerCase();
-      return name.startsWith("throughput-cell-") && ["1.dat", "2.dat", "3.dat"].some(suffix => name.endsWith(suffix));
-    });
-    if (files.length === 0) {
-      return res.status(400).json({ error: "No demo throughput-cell-[1-3].dat files found" });
-    }
-
+    // Generate realistic synthetic O-RAN fronthaul telemetry data
+    // Simulates 3 cells across 2000 slots each with realistic traffic patterns
     processedData = {};
 
-    files.forEach(filename => {
-      const filePath = path.join(demoDir, filename);
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const lines = content.trim().split('\n').slice(0, 28000);
-      
-      const dataLines = lines.filter(line => {
-        const parts = line.trim().split(/\s+/);
-        return parts.length >= 2 && !isNaN(Number(parts[0]));
-      });
+    const CELLS = [
+      { id: "throughput-cell-1", baseMbps: 3.8, variance: 0.9, pattern: "bursty" },
+      { id: "throughput-cell-2", baseMbps: 2.1, variance: 0.5, pattern: "steady" },
+      { id: "throughput-cell-3", baseMbps: 5.2, variance: 1.4, pattern: "peaked" },
+    ];
 
-      const data = dataLines.map(line => {
-        const parts = line.trim().split(/\s+/).map(Number);
-        if (parts.length === 2) {
-          return { symbol: parts[0] || 0, packets: 0, bytes: parts[1] || 0 };
-        } else {
-          return { symbol: parts[0] || 0, packets: parts[1] || 0, bytes: parts[2] || 0 };
-        }
-      });
-      
+    CELLS.forEach(cell => {
       const slots: any[] = [];
-      for (let i = 0; i < data.length; i += 14) {
-        const chunk = data.slice(i, i + 14);
-        const packets = chunk.reduce((acc, curr) => acc + curr.packets, 0);
-        const bytes = chunk.reduce((acc, curr) => acc + curr.bytes, 0);
-        const throughput_gbps = (bytes * 16000) / 1e9;
-        slots.push({ slot_index: i / 14, packets, bytes, throughput_gbps });
+      for (let i = 0; i < 2000; i++) {
+        // Time of day effect: busiest 8am-10pm (slots 300-1380 assuming 0.5s per slot)
+        const timeOfDay = (i % 1440) / 1440;
+        const tod_factor = 0.4 + 0.6 * Math.sin(Math.PI * Math.max(0, Math.min(timeOfDay * 24 - 6, 14) / 14));
+
+        // Pattern variation
+        let noise = 0;
+        if (cell.pattern === "bursty") {
+          noise = Math.random() < 0.05 ? cell.variance * 3 * Math.random() : (Math.random() - 0.5) * cell.variance;
+        } else if (cell.pattern === "peaked") {
+          noise = Math.sin(i / 50) * cell.variance * 0.5 + (Math.random() - 0.5) * cell.variance * 0.5;
+        } else {
+          noise = (Math.random() - 0.5) * cell.variance;
+        }
+
+        const throughput_gbps = Math.max(0.01, (cell.baseMbps * tod_factor + noise) / 1000);
+        const bytes = Math.round((throughput_gbps * 1e9) / 16000);
+        const packets = Math.round(bytes / 1500);
+        const packet_loss = Math.random() < 0.02 ? Math.random() * 0.05 : 0;
+
+        slots.push({ slot_index: i, packets, bytes, throughput_gbps, packet_loss });
       }
-      
-      const keyName = filename.replace('.dat', '').replace(/[^a-zA-Z0-9_-]/g, '');
-      if (keyName === '__proto__' || keyName === 'constructor' || keyName === 'prototype') {
-        console.warn("Security warning: Blocked prototype pollution attempt:", keyName);
-        return;
-      }
-      processedData[keyName] = slots;
+      processedData[cell.id] = slots;
     });
 
     const pythonProcess = spawn('python3', ['run_analysis.py']);
@@ -272,7 +257,7 @@ app.post("/api/load-demo", (req, res) => {
     pythonProcess.stdin.write(JSON.stringify(processedData));
     pythonProcess.stdin.end();
   } catch (err: any) {
-    res.status(500).json({ error: "Failed to process demo data: " + err.message });
+    res.status(500).json({ error: "Failed to generate demo data: " + err.message });
   }
 });
 
